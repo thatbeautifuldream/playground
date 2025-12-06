@@ -1,15 +1,16 @@
 "use client";
 
-import { MoonIcon, PlayIcon, SunIcon } from "lucide-react";
+import { MoonIcon, PlayIcon, ShareIcon, SunIcon } from "lucide-react";
 import GitHubButton from "react-github-btn";
 import { Button } from "./button";
 
 interface HeaderProps {
   onRun?: () => void;
   onThemeToggle?: () => void;
+  onShare?: () => void;
 }
 
-export function Header({ onRun, onThemeToggle }: HeaderProps) {
+export function Header({ onRun, onThemeToggle, onShare }: HeaderProps) {
   return (
     <header className="flex items-center justify-between h-8 px-3 bg-background border-b border-border">
       <div className="flex items-center space-x-2">
@@ -40,6 +41,16 @@ export function Header({ onRun, onThemeToggle }: HeaderProps) {
         >
           <PlayIcon className="h-3 w-3 mr-1" />
           Run
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onShare}
+          className="h-6 px-2 text-xs cursor-pointer"
+        >
+          <ShareIcon className="h-3 w-3 mr-1" />
+          Share
         </Button>
 
         <Button

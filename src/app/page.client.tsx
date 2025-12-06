@@ -8,9 +8,11 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSandbox } from "@/hooks/use-sandbox";
+import { compressedCodeParser } from "@/lib/url-parser";
 import { useReplStore } from "@/stores/repl-store";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
+import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -24,6 +26,36 @@ export function PageClient() {
   const pushLog = useReplStore((s) => s.pushLog);
   const clearLogs = useReplStore((s) => s.clearLogs);
   const { theme, setTheme } = useTheme();
+
+  const [urlCode, setUrlCode] = useQueryState(
+    "code",
+    compressedCodeParser.withOptions({ history: "replace" })
+  );
+  const hasLoadedFromUrl = useRef(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (urlCode && !hasLoadedFromUrl.current) {
+      setCode(urlCode);
+      hasLoadedFromUrl.current = true;
+    }
+  }, [urlCode, setCode]);
+
+  useEffect(() => {
+    if (hasLoadedFromUrl.current && code && code !== urlCode) {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      updateTimeoutRef.current = setTimeout(() => {
+        setUrlCode(code);
+      }, 500);
+    }
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, [code, urlCode, setUrlCode]);
 
   const { containerRef, run } = useSandbox((entry) => {
     pushLog(entry);
@@ -48,11 +80,20 @@ export function PageClient() {
     runCodeRef.current = runCode;
   }, [runCode]);
 
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // Silently fail if clipboard access is denied
+    }
+  };
+
   return (
     <main className="h-screen bg-background text-foreground overflow-hidden flex flex-col">
       <Header
         onRun={runCode}
         onThemeToggle={() => setTheme(theme === "light" ? "dark" : "light")}
+        onShare={handleShare}
       />
       <ResizablePanelGroup direction="vertical" className="flex-1">
         <ResizablePanel defaultSize={75} minSize={30}>
@@ -130,7 +171,6 @@ export function PageClient() {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* Hidden iframe container for sandboxed execution */}
       <div ref={containerRef} aria-hidden="true" />
     </main>
   );
