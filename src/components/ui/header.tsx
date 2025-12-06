@@ -1,6 +1,7 @@
 "use client";
 
-import { PlayIcon, MoonIcon, SunIcon } from "lucide-react";
+import { MoonIcon, PlayIcon, SunIcon } from "lucide-react";
+import GitHubButton from "react-github-btn";
 import { Button } from "./button";
 
 interface HeaderProps {
@@ -19,11 +20,23 @@ export function Header({ onRun, onThemeToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center space-x-1">
+        <div className="flex items-center text-xs -mb-1">
+          <GitHubButton
+            href="https://github.com/thatbeautifuldream/playground"
+            data-color-scheme="no-preference: light; light: light; dark: dark;"
+            data-icon="octicon-star"
+            data-show-count="true"
+            aria-label="Star thatbeautifuldream/playground on GitHub"
+          >
+            Star
+          </GitHubButton>
+        </div>
+
         <Button
           variant="ghost"
           size="sm"
           onClick={onRun}
-          className="h-6 px-2 text-xs"
+          className="h-6 px-2 text-xs cursor-pointer"
         >
           <PlayIcon className="h-3 w-3 mr-1" />
           Run
@@ -33,7 +46,7 @@ export function Header({ onRun, onThemeToggle }: HeaderProps) {
           variant="ghost"
           size="icon"
           onClick={onThemeToggle}
-          className="h-6 w-6"
+          className="h-6 w-6 cursor-pointer"
         >
           <SunIcon className="h-3 w-3 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <MoonIcon className="absolute h-3 w-3 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

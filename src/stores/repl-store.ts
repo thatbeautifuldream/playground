@@ -13,7 +13,7 @@ type ReplState = {
   clearLogs: () => void;
 };
 
-const defaultSnippet = `// TypeScript REPL - Cmd/Ctrl + Enter to run, Cmd/Ctrl + S to format
+const defaultSnippet = `// TypeScript Playground - Cmd/Ctrl + Enter to run, Cmd/Ctrl + S to format
 
 type User = {
   name: string;
@@ -21,7 +21,7 @@ type User = {
 }
 
 const greet = (user: User): string => {
-  return \`Hello, \${user.name}! You are \${user.age} years old.\`;
+  return \`Hello, \${user.name}! I am \${user.age} years old.\`;
 };
 
 const user: User = { name: "Milind", age: 25 };
