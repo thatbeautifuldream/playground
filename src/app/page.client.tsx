@@ -1,18 +1,18 @@
 "use client";
 
+import { Terminal } from "@/components/repl/terminal";
+import { Header } from "@/components/ui/header";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { useSandbox } from "@/hooks/use-sandbox";
+import { useReplStore } from "@/stores/repl-store";
+import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef } from "react";
-import { useReplStore } from "@/stores/repl-store";
-import { useSandbox } from "@/hooks/use-sandbox";
-import { useReplShortcuts } from "@/hooks/use-repl-shortcuts";
-import { Terminal } from "@/components/repl/terminal";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
-import { Header } from "@/components/ui/header";
-import { useTheme } from "next-themes";
+import { useHotkeys } from "react-hotkeys-hook";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -37,7 +37,10 @@ export function PageClient() {
     [code, clearLogs, run]
   );
 
-  useReplShortcuts(runCode);
+  useHotkeys("ctrl+enter, meta+enter", runCode, {
+    preventDefault: true,
+    enableOnFormTags: ["textarea"],
+  });
 
   const runCodeRef = useRef(runCode);
 
@@ -55,7 +58,9 @@ export function PageClient() {
         <ResizablePanel defaultSize={75} minSize={30}>
           <MonacoEditor
             height="100%"
-            defaultLanguage="javascript"
+            defaultLanguage="typescript"
+            language="typescript"
+            path="index.ts"
             value={code}
             onChange={(v) => setCode(v ?? "")}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
@@ -79,16 +84,39 @@ export function PageClient() {
               },
             }}
             onMount={(editor, monaco) => {
+              monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                {
+                  target: monaco.languages.typescript.ScriptTarget.ES2020,
+                  allowNonTsExtensions: true,
+                  moduleResolution:
+                    monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                  module: monaco.languages.typescript.ModuleKind.ESNext,
+                  noEmit: true,
+                  esModuleInterop: true,
+                  jsx: monaco.languages.typescript.JsxEmit.React,
+                  allowJs: true,
+                  typeRoots: ["node_modules/@types"],
+                }
+              );
+
+              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
+                {
+                  noSemanticValidation: false,
+                  noSyntaxValidation: false,
+                }
+              );
+
               editor.addCommand(
                 monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
                 () => {
                   runCodeRef.current?.();
                 }
               );
+
               editor.addCommand(
-                monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-                () => {
-                  runCodeRef.current?.();
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+                async () => {
+                  await editor.getAction("editor.action.formatDocument")?.run();
                 }
               );
             }}

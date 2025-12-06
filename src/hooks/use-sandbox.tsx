@@ -1,44 +1,52 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import type { LogEntry } from "@/stores/repl-store"
+import { useEffect, useRef } from "react";
+import type { LogEntry } from "@/stores/repl-store";
+import { transpileTypeScript } from "@/lib/transpile-ts";
 
 export function useSandbox(onMessage: (entry: LogEntry) => void) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Receive messages from iframe
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      const data = event.data
-      if (!data || data.source !== "repl") return
+      const data = event.data;
+      if (!data || data.source !== "repl") return;
       if (data.type === "log") {
-        const payload = (data.payload as string[]) ?? []
-        onMessage({ type: "log", message: payload.join(" ") })
+        const payload = (data.payload as string[]) ?? [];
+        onMessage({ type: "log", message: payload.join(" ") });
       } else if (data.type === "error") {
-        onMessage({ type: "error", message: String(data.payload) })
+        onMessage({ type: "error", message: String(data.payload) });
       }
-    }
-    window.addEventListener("message", handler)
-    return () => window.removeEventListener("message", handler)
-  }, [onMessage])
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [onMessage]);
 
   const run = (code: string) => {
-    // Clean up any previous iframe
     if (iframeRef.current && containerRef.current) {
       try {
-        containerRef.current.removeChild(iframeRef.current)
+        containerRef.current.removeChild(iframeRef.current);
       } catch {}
-      iframeRef.current = null
+      iframeRef.current = null;
     }
 
-    const iframe = document.createElement("iframe")
-    iframe.setAttribute("sandbox", "allow-scripts")
-    iframe.style.width = "0"
-    iframe.style.height = "0"
-    iframe.style.border = "0"
+    const result = transpileTypeScript(code);
 
-    // Minimal HTML for sandboxed execution (no network, scripts only)
+    if (!result.success && result.errors.length > 0) {
+      for (const error of result.errors) {
+        onMessage({ type: "error", message: `[TS Compilation] ${error}` });
+      }
+    }
+
+    const executableCode = result.code || code;
+
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+
     const html = `
 <!doctype html>
 <html>
@@ -104,11 +112,7 @@ export function useSandbox(onMessage: (entry: LogEntry) => void) {
 
         ;(async function run() {
           try {
-            ${"/* Executed user code begins */"}
-            ${"/* eslint-disable */"}
-            ${"/* @ts-nocheck */"}
-            ${code}
-            ${"/* Executed user code ends */"}
+            ${executableCode}
           } catch (err) {
             send('error', (err && (err.stack || err.message)) || String(err))
           }
@@ -117,12 +121,12 @@ export function useSandbox(onMessage: (entry: LogEntry) => void) {
     </script>
   </body>
 </html>
-`.trim()
+`.trim();
 
-    iframe.srcdoc = html
-    containerRef.current?.appendChild(iframe)
-    iframeRef.current = iframe
-  }
+    iframe.srcdoc = html;
+    containerRef.current?.appendChild(iframe);
+    iframeRef.current = iframe;
+  };
 
-  return { containerRef, run }
+  return { containerRef, run };
 }

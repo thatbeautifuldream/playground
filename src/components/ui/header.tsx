@@ -1,20 +1,23 @@
-"use client"
+"use client";
 
-import { PlayIcon, MoonIcon, SunIcon } from "lucide-react"
-import { Button } from "./button"
+import { PlayIcon, MoonIcon, SunIcon } from "lucide-react";
+import { Button } from "./button";
 
 interface HeaderProps {
-  onRun?: () => void
-  onThemeToggle?: () => void
+  onRun?: () => void;
+  onThemeToggle?: () => void;
 }
 
 export function Header({ onRun, onThemeToggle }: HeaderProps) {
   return (
     <header className="flex items-center justify-between h-8 px-3 bg-background border-b border-border">
       <div className="flex items-center space-x-2">
-        <span className="text-sm font-medium text-muted-foreground">JS REPL</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          TypeScript REPL
+        </span>
+        <span className="text-xs text-muted-foreground/60">(JS works too)</span>
       </div>
-      
+
       <div className="flex items-center space-x-1">
         <Button
           variant="ghost"
@@ -25,7 +28,7 @@ export function Header({ onRun, onThemeToggle }: HeaderProps) {
           <PlayIcon className="h-3 w-3 mr-1" />
           Run
         </Button>
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -38,5 +41,5 @@ export function Header({ onRun, onThemeToggle }: HeaderProps) {
         </Button>
       </div>
     </header>
-  )
+  );
 }

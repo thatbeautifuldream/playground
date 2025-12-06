@@ -13,13 +13,23 @@ type ReplState = {
   clearLogs: () => void;
 };
 
-const defaultSnippet = `// JavaScript REPL
-// Shortcuts:
-// - Ctrl/Cmd + Enter: Run code
-//
-// Write JS below. Use console.log() to print output.
+const defaultSnippet = `// TypeScript REPL - Cmd/Ctrl + Enter to run, Cmd/Ctrl + S to format
 
-console.log("Hello from Milind's JS REPL!")
+type User = {
+  name: string;
+  age: number;
+}
+
+const greet = (user: User): string => {
+  return \`Hello, \${user.name}! You are \${user.age} years old.\`;
+};
+
+const user: User = { name: "Milind", age: 25 };
+console.log(greet(user));
+
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(n => n * 2);
+console.log("Doubled:", doubled);
 `;
 
 export const useReplStore = create<ReplState>()(
@@ -34,7 +44,6 @@ export const useReplStore = create<ReplState>()(
     {
       name: "js-repl",
       storage: createJSONStorage(() => localStorage),
-      // Persist both code and logs
       partialize: (s) => ({ code: s.code, logs: s.logs }),
     }
   )
