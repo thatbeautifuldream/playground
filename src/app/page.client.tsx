@@ -31,18 +31,20 @@ export function PageClient() {
     "code",
     compressedCodeParser.withOptions({ history: "replace" })
   );
-  const hasLoadedFromUrl = useRef(false);
+  const isInitialMount = useRef(true);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (urlCode && !hasLoadedFromUrl.current) {
-      setCode(urlCode);
-      hasLoadedFromUrl.current = true;
+    if (isInitialMount.current) {
+      if (urlCode) {
+        setCode(urlCode);
+      }
+      isInitialMount.current = false;
     }
   }, [urlCode, setCode]);
 
   useEffect(() => {
-    if (hasLoadedFromUrl.current && code && code !== urlCode) {
+    if (!isInitialMount.current && code && code !== urlCode) {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
