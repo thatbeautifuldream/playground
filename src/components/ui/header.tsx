@@ -15,13 +15,12 @@ export function Header({ onRun, onThemeToggle, onShare }: HeaderProps) {
     <header className="flex items-center justify-between h-8 px-3 bg-background border-b border-border">
       <div className="flex items-center space-x-2">
         <span className="text-sm font-medium text-muted-foreground">
-          TypeScript REPL
+          TS Playground
         </span>
-        <span className="text-xs text-muted-foreground/60">(JS works too)</span>
       </div>
 
       <div className="flex items-center space-x-1">
-        <div className="flex items-center text-xs -mb-1">
+        <div className="hidden sm:flex items-center text-xs -mb-1">
           <GitHubButton
             href="https://github.com/thatbeautifuldream/playground"
             data-color-scheme="no-preference: light; light: light; dark: dark;"
@@ -37,20 +36,20 @@ export function Header({ onRun, onThemeToggle, onShare }: HeaderProps) {
           variant="ghost"
           size="sm"
           onClick={onRun}
-          className="h-6 px-2 text-xs cursor-pointer"
+          className="h-6 sm:px-2 px-1 text-xs cursor-pointer"
         >
-          <PlayIcon className="h-3 w-3 mr-1" />
-          Run
+          <PlayIcon className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">Run</span>
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={onShare}
-          className="h-6 px-2 text-xs cursor-pointer"
+          className="h-6 sm:px-2 px-1 text-xs cursor-pointer"
         >
-          <ShareIcon className="h-3 w-3 mr-1" />
-          Share
+          <ShareIcon className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">Share</span>
         </Button>
 
         <Button
