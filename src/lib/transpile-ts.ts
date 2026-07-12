@@ -1,4 +1,4 @@
-import ts from "typescript";
+import type { TranspileResponse } from "./ts-worker";
 
 export interface TranspileResult {
   success: boolean;
@@ -6,54 +6,67 @@ export interface TranspileResult {
   errors: string[];
 }
 
-export function transpileTypeScript(sourceCode: string): TranspileResult {
-  try {
-    const result = ts.transpileModule(sourceCode, {
-      compilerOptions: {
-        target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.ESNext,
-        jsx: ts.JsxEmit.React,
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        strict: false,
-        skipLibCheck: true,
-        noEmit: false,
-      },
-      reportDiagnostics: true,
-    });
+type PendingEntry = {
+  resolve: (r: TranspileResult) => void;
+  reject: (e: unknown) => void;
+};
 
-    const errors: string[] = [];
-    if (result.diagnostics && result.diagnostics.length > 0) {
-      for (const diagnostic of result.diagnostics) {
-        const message = ts.flattenDiagnosticMessageText(
-          diagnostic.messageText,
-          "\n"
-        );
+let workerPromise: Promise<Worker> | null = null;
+let requestCounter = 0;
+const pending = new Map<number, PendingEntry>();
 
-        if (diagnostic.file && diagnostic.start !== undefined) {
-          const { line, character } =
-            diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-          errors.push(`Line ${line + 1}:${character + 1} - ${message}`);
-        } else {
-          errors.push(message);
+function getWorker(): Promise<Worker> {
+  if (!workerPromise) {
+    workerPromise = import("./ts-worker-client").then(({ createWorker }) => {
+      const worker = createWorker();
+      worker.onmessage = (
+        event: MessageEvent<TranspileResponse>
+      ) => {
+        const { id, success, code, errors } = event.data;
+        const entry = pending.get(id);
+        if (entry) {
+          pending.delete(id);
+          entry.resolve({ success, code, errors });
         }
-      }
-    }
+      };
+      worker.onerror = (error) => {
+        for (const { reject } of pending.values()) {
+          reject(error);
+        }
+        pending.clear();
+        workerPromise = null;
+      };
+      return worker;
+    });
+  }
+  return workerPromise;
+}
 
-    return {
-      success: errors.length === 0,
-      code: result.outputText,
-      errors,
-    };
+async function request(kind: "transpile" | "format", code: string) {
+  try {
+    const worker = await getWorker();
+    const id = ++requestCounter;
+    return await new Promise<TranspileResult>((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ id, kind, code });
+    });
   } catch (error) {
     return {
       success: false,
       code: "",
       errors: [
-        `Transpilation error: ${
+        `Worker error: ${
           error instanceof Error ? error.message : String(error)
         }`,
       ],
     };
   }
+}
+
+export function transpileTypeScript(sourceCode: string): Promise<TranspileResult> {
+  return request("transpile", sourceCode);
+}
+
+export function formatTypeScript(sourceCode: string): Promise<TranspileResult> {
+  return request("format", sourceCode);
 }

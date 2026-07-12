@@ -9,8 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.1",
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.6",
     "@radix-ui/react-scroll-area": "^1.2.10",
+    "@uiw/react-codemirror": "^4.25.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.542.0",

@@ -1,28 +1,38 @@
 "use client";
 
 import { Terminal } from "@/components/repl/terminal";
+import { Editor } from "@/components/repl/editor";
 import { Header } from "@/components/ui/header";
+import { Button } from "@/components/ui/button";
+import { TouchTarget } from "@/components/ui/touch-target";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSandbox } from "@/hooks/use-sandbox";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { compressedCodeParser } from "@/lib/url-parser";
+import { formatTypeScript } from "@/lib/transpile-ts";
 import { useReplStore } from "@/stores/repl-store";
+import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
-import dynamic from "next/dynamic";
 import { useQueryState } from "nuqs";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import {
+  CodeIcon,
+  PlayIcon,
+  SquareTerminalIcon,
+  WandSparklesIcon,
+} from "lucide-react";
 
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-});
+type MobileView = "editor" | "console";
 
 export function PageClient() {
   const code = useReplStore((s) => s.code);
   const setCode = useReplStore((s) => s.setCode);
+  const logs = useReplStore((s) => s.logs);
   const pushLog = useReplStore((s) => s.pushLog);
   const clearLogs = useReplStore((s) => s.clearLogs);
   const { theme, setTheme } = useTheme();
@@ -32,7 +42,10 @@ export function PageClient() {
     compressedCodeParser.withOptions({ history: "replace" })
   );
   const isInitialMount = useRef(true);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isMobile = useMediaQuery("(max-width: 1023px)");
+  const [mobileView, setMobileView] = useState<MobileView>("editor");
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -63,117 +76,186 @@ export function PageClient() {
     pushLog(entry);
   });
 
-  const runCode = useMemo(
-    () => () => {
-      clearLogs();
-      run(code);
-    },
-    [code, clearLogs, run]
-  );
+  const runCode = useCallback(() => {
+    clearLogs();
+    run(code);
+    if (isMobile) {
+      setMobileView("console");
+    }
+  }, [code, clearLogs, run, isMobile]);
 
   useHotkeys("ctrl+enter, meta+enter", runCode, {
     preventDefault: true,
-    enableOnFormTags: ["textarea"],
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
   });
 
-  const runCodeRef = useRef(runCode);
+  const handleFormat = useCallback(async () => {
+    const result = await formatTypeScript(code);
+    if (result.success && result.code !== code) {
+      setCode(result.code);
+    }
+  }, [code, setCode]);
 
-  useEffect(() => {
-    runCodeRef.current = runCode;
-  }, [runCode]);
+  useHotkeys("ctrl+s, meta+s", handleFormat, {
+    preventDefault: true,
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
+  });
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
     } catch {
       // Silently fail if clipboard access is denied
     }
-  };
+  }, []);
+
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+  const editorTheme = theme === "light" ? "light" : "dark";
+  const logCount = logs.length;
 
   return (
-    <main className="h-screen bg-background text-foreground overflow-hidden flex flex-col">
-      <Header
-        onRun={runCode}
-        onThemeToggle={() => setTheme(theme === "light" ? "dark" : "light")}
-        onShare={handleShare}
-      />
-      <ResizablePanelGroup direction="vertical" className="flex-1">
-        <ResizablePanel defaultSize={75} minSize={30}>
-          <MonacoEditor
-            height="100%"
-            defaultLanguage="typescript"
-            language="typescript"
-            path="index.ts"
-            value={code}
-            onChange={(v) => setCode(v ?? "")}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              fontFamily: "var(--font-geist-mono)",
-              wordWrap: "on",
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              renderWhitespace: "selection",
-              tabSize: 2,
-              overviewRulerLanes: 0,
-              overviewRulerBorder: false,
-              hideCursorInOverviewRuler: true,
-              scrollbar: {
-                vertical: "auto",
-                horizontal: "auto",
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10,
-              },
-            }}
-            onMount={(editor, monaco) => {
-              monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
-                {
-                  target: monaco.languages.typescript.ScriptTarget.ES2020,
-                  allowNonTsExtensions: true,
-                  moduleResolution:
-                    monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-                  module: monaco.languages.typescript.ModuleKind.ESNext,
-                  noEmit: true,
-                  esModuleInterop: true,
-                  jsx: monaco.languages.typescript.JsxEmit.React,
-                  allowJs: true,
-                  typeRoots: ["node_modules/@types"],
-                }
-              );
-
-              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
-                {
-                  noSemanticValidation: false,
-                  noSyntaxValidation: false,
-                }
-              );
-
-              editor.addCommand(
-                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-                () => {
-                  runCodeRef.current?.();
-                }
-              );
-
-              editor.addCommand(
-                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
-                async () => {
-                  await editor.getAction("editor.action.formatDocument")?.run();
-                }
-              );
-            }}
+    <main className="h-dvh bg-background text-foreground overflow-hidden flex flex-col">
+      {isMobile ? (
+        <>
+          <Header onThemeToggle={toggleTheme} onShare={handleShare} />
+          <MobileToolbar
+            mobileView={mobileView}
+            setMobileView={setMobileView}
+            logCount={logCount}
+            onFormat={handleFormat}
+            onRun={runCode}
           />
-        </ResizablePanel>
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div
+              className={cn(
+                "flex-1 min-h-0",
+                mobileView === "editor" ? "flex" : "hidden"
+              )}
+            >
+              <Editor
+                value={code}
+                onChange={(v) => setCode(v)}
+                theme={editorTheme}
+              />
+            </div>
+            <div
+              className={cn(
+                "flex-1 min-h-0",
+                mobileView === "console" ? "flex" : "hidden"
+              )}
+            >
+              <Terminal />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <Header
+            onRun={runCode}
+            onThemeToggle={toggleTheme}
+            onShare={handleShare}
+            onFormat={handleFormat}
+          />
+          <ResizablePanelGroup direction="vertical" className="flex-1">
+            <ResizablePanel defaultSize={75} minSize={30}>
+              <Editor
+                value={code}
+                onChange={(v) => setCode(v)}
+                theme={editorTheme}
+              />
+            </ResizablePanel>
 
-        <ResizableHandle />
+            <ResizableHandle />
 
-        <ResizablePanel defaultSize={25} minSize={8} maxSize={60}>
-          <Terminal />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+            <ResizablePanel defaultSize={25} minSize={8} maxSize={60}>
+              <Terminal />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </>
+      )}
 
       <div ref={containerRef} aria-hidden="true" />
     </main>
+  );
+}
+
+function MobileToolbar({
+  mobileView,
+  setMobileView,
+  logCount,
+  onFormat,
+  onRun,
+}: {
+  mobileView: MobileView;
+  setMobileView: (v: MobileView) => void;
+  logCount: number;
+  onFormat: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 h-12 px-2 border-b border-border bg-muted/30 flex-shrink-0">
+      <div className="flex items-center rounded-lg bg-background p-0.5 border border-border">
+        <button
+          type="button"
+          onClick={() => setMobileView("editor")}
+          aria-pressed={mobileView === "editor"}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 h-9 text-sm rounded-[7px] transition-colors",
+            mobileView === "editor"
+              ? "bg-muted font-medium text-foreground"
+              : "text-muted-foreground"
+          )}
+        >
+          <CodeIcon className="size-4" />
+          Code
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("console")}
+          aria-pressed={mobileView === "console"}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 h-9 text-sm rounded-[7px] transition-colors",
+            mobileView === "console"
+              ? "bg-muted font-medium text-foreground"
+              : "text-muted-foreground"
+          )}
+        >
+          <SquareTerminalIcon className="size-4" />
+          Console
+          {logCount > 0 && (
+            <span className="ml-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium tabular-nums leading-none">
+              {logCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="flex-1" />
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onFormat}
+        className="relative h-9 w-9 p-0 cursor-pointer"
+        title="Format code"
+      >
+        <WandSparklesIcon className="size-4" />
+        <span className="sr-only">Format</span>
+        <TouchTarget />
+      </Button>
+
+      <Button
+        variant="default"
+        size="sm"
+        onClick={onRun}
+        className="relative h-9 px-4 text-sm gap-1.5 cursor-pointer"
+        title="Run code"
+      >
+        <PlayIcon className="size-4" />
+        Run
+      </Button>
+    </div>
   );
 }
