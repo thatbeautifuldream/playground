@@ -95,7 +95,31 @@ export function useSandbox(onMessage: (entry: LogEntry) => void) {
   const readyRef = useRef(false);
   const pendingRef = useRef<string | null>(null);
   const onMessageRef = useRef(onMessage);
-  onMessageRef.current = onMessage;
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
+  const ensureIframe = useCallback(() => {
+    if (iframeRef.current) return iframeRef.current;
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.position = "absolute";
+    iframe.srcdoc = SANDBOX_HTML;
+    containerRef.current?.appendChild(iframe);
+    iframeRef.current = iframe;
+    readyRef.current = false;
+    return iframe;
+  }, []);
+
+  const postExec = useCallback((code: string) => {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage({ target: "repl-exec", code }, "*");
+  }, []);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
@@ -119,28 +143,7 @@ export function useSandbox(onMessage: (entry: LogEntry) => void) {
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
-
-  const ensureIframe = useCallback(() => {
-    if (iframeRef.current) return iframeRef.current;
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("sandbox", "allow-scripts");
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.position = "absolute";
-    iframe.srcdoc = SANDBOX_HTML;
-    containerRef.current?.appendChild(iframe);
-    iframeRef.current = iframe;
-    readyRef.current = false;
-    return iframe;
-  }, []);
-
-  const postExec = useCallback((code: string) => {
-    const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentWindow) return;
-    iframe.contentWindow.postMessage({ target: "repl-exec", code }, "*");
-  }, []);
+  }, [postExec]);
 
   const run = useCallback(async (code: string) => {
     ensureIframe();
