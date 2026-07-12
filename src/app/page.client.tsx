@@ -32,7 +32,6 @@ type MobileView = "editor" | "console";
 export function PageClient() {
   const code = useReplStore((s) => s.code);
   const setCode = useReplStore((s) => s.setCode);
-  const logs = useReplStore((s) => s.logs);
   const pushLog = useReplStore((s) => s.pushLog);
   const clearLogs = useReplStore((s) => s.clearLogs);
   const { theme, setTheme } = useTheme();
@@ -113,7 +112,6 @@ export function PageClient() {
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const editorTheme = theme === "light" ? "light" : "dark";
-  const logCount = logs.length;
 
   return (
     <main className="h-dvh bg-background text-foreground overflow-hidden flex flex-col">
@@ -123,7 +121,6 @@ export function PageClient() {
           <MobileToolbar
             mobileView={mobileView}
             setMobileView={setMobileView}
-            logCount={logCount}
             onFormat={handleFormat}
             onRun={runCode}
           />
@@ -131,7 +128,7 @@ export function PageClient() {
             <div
               className={cn(
                 "flex-1 min-h-0",
-                mobileView === "editor" ? "flex" : "hidden"
+                mobileView === "editor" ? "block" : "hidden"
               )}
             >
               <Editor
@@ -143,7 +140,7 @@ export function PageClient() {
             <div
               className={cn(
                 "flex-1 min-h-0",
-                mobileView === "console" ? "flex" : "hidden"
+                mobileView === "console" ? "block" : "hidden"
               )}
             >
               <Terminal />
@@ -184,13 +181,11 @@ export function PageClient() {
 function MobileToolbar({
   mobileView,
   setMobileView,
-  logCount,
   onFormat,
   onRun,
 }: {
   mobileView: MobileView;
   setMobileView: (v: MobileView) => void;
-  logCount: number;
   onFormat: () => void;
   onRun: () => void;
 }) {
@@ -224,11 +219,6 @@ function MobileToolbar({
         >
           <SquareTerminalIcon className="size-4" />
           Console
-          {logCount > 0 && (
-            <span className="ml-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium tabular-nums leading-none">
-              {logCount}
-            </span>
-          )}
         </button>
       </div>
 

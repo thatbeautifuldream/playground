@@ -13,6 +13,7 @@ const googleSansCode = Google_Sans_Code({
   variable: "--font-google-sans-code",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {

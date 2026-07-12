@@ -45,7 +45,7 @@
 
 :root {
   --radius: 0.625rem;
-  --editor-font-size: 16px;
+  --editor-font-size: 14px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -119,10 +119,5 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-  @media (min-width: 1024px) {
-    :root {
-      --editor-font-size: 14px;
-    }
   }
 }
