@@ -13,6 +13,7 @@ import {
 import { useSandbox } from "@/hooks/use-sandbox";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { compressedCodeParser } from "@/lib/url-parser";
+import { compressToEncodedURIComponent } from "lz-string";
 import { formatTypeScript } from "@/lib/transpile-ts";
 import { useReplStore } from "@/stores/repl-store";
 import { cn } from "@/lib/utils";
@@ -102,11 +103,15 @@ export function PageClient() {
     enableOnContentEditable: true,
   });
 
-  const handleShare = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href).catch(() => {
-      window.prompt("Copy link", window.location.href);
-    });
-  }, []);
+  const getShareUrl = useCallback(() => {
+    const url = new URL(window.location.href);
+    if (code) {
+      url.searchParams.set("code", compressToEncodedURIComponent(code));
+    } else {
+      url.searchParams.delete("code");
+    }
+    return url.toString();
+  }, [code]);
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const editorTheme = theme === "light" ? "light" : "dark";
@@ -115,7 +120,7 @@ export function PageClient() {
     <main className="h-dvh bg-background text-foreground overflow-hidden flex flex-col">
       {isMobile ? (
         <>
-          <Header onThemeToggle={toggleTheme} onShare={handleShare} />
+          <Header onThemeToggle={toggleTheme} getShareUrl={getShareUrl} />
           <MobileToolbar
             mobileView={mobileView}
             setMobileView={setMobileView}
@@ -150,7 +155,7 @@ export function PageClient() {
           <Header
             onRun={runCode}
             onThemeToggle={toggleTheme}
-            onShare={handleShare}
+            getShareUrl={getShareUrl}
             onFormat={handleFormat}
           />
           <ResizablePanelGroup direction="vertical" className="flex-1">
