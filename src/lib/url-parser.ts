@@ -7,11 +7,7 @@ import { createParser } from "nuqs";
 export const compressedCodeParser = createParser({
   parse(queryValue) {
     if (!queryValue) return null;
-    try {
-      return decompressFromEncodedURIComponent(queryValue) || null;
-    } catch {
-      return null;
-    }
+    return decompressFromEncodedURIComponent(queryValue) || null;
   },
   serialize(value) {
     return value ? compressToEncodedURIComponent(value) : "";

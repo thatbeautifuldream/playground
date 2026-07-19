@@ -102,12 +102,10 @@ export function PageClient() {
     enableOnContentEditable: true,
   });
 
-  const handleShare = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch {
-      // Silently fail if clipboard access is denied
-    }
+  const handleShare = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).catch(() => {
+      window.prompt("Copy link", window.location.href);
+    });
   }, []);
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
