@@ -6,6 +6,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { javascript } from "@codemirror/lang-javascript";
 import { indentWithTab } from "@codemirror/commands";
+import { lightTheme, darkTheme } from "./themes";
 
 interface EditorProps {
   value: string;
@@ -37,7 +38,7 @@ export function Editor({ value, onChange, theme }: EditorProps) {
     <CodeMirror
       value={value}
       onChange={onChange}
-      theme={theme === "dark" ? "dark" : "light"}
+      theme={theme === "dark" ? darkTheme : lightTheme}
       height="100%"
       style={{ height: "100%" }}
       extensions={extensions}
